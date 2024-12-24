@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biblioteca Digital</title>
+</head>
+<body>
+    <h1>Gestão de Livros</h1>
+    <form id="livroForm">
+        <input type="hidden" id="id" placeholder="ID">
+        <input type="text" id="titulo" placeholder="Título" required>
+        <input type="text" id="autor" placeholder="Autor" required>
+        <input type="number" id="ano" placeholder="Ano de Publicação" required>
+        <input type="text" id="isbn" placeholder="ISBN" required>
+        <button type="submit">Salvar Livro</button>
+    </form>
+
+    <h2>Lista de Livros</h2>
+    <ul id="listaLivros">
+        <li th:each="livro : ${livros}">
+            <span th:text="${livro.titulo}">Título</span> - 
+            <span th:text="${livro.autor}">Autor</span> (Publicado em 
+            <span th:text="${livro.anoPublicacao}">Ano</span>)
+            <button th:onclick="'editarLivro(' + ${livro.id} + ')'">Editar</button>
+            <button th:onclick="'excluirLivro(' + ${livro.id} + ')'">Excluir</button>
+        </li>
+    </ul>
+
+    <script>
+        const apiUrl = '/livros';
+      
+        async function listarLivros() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error(`Erro na requisição: ${response.status}`);
+                }
+                const livros = await response.json();
+                const lista = document.getElementById('listaLivros');
+                lista.innerHTML = '';
+                livros.forEach(livro => {
+                    const item = document.createElement('li');
+                    item.innerHTML = `${livro.titulo} - ${livro.autor} (${livro.anoPublicacao})
+                    <button onclick="editarLivro(${livro.id})">Editar</button>
+                    <button onclick="excluirLivro(${livro.id})">Excluir</button>`;
+                    lista.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Erro ao listar livros:", error);
+            }
+        }
+
+        document.getElementById('livroForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const livro = {
+                id: document.getElementById('id').value,
+                titulo: document.getElementById('titulo').value,
+                autor: document.getElementById('autor').value,
+                anoPublicacao: parseInt(document.getElementById('ano').value),
+                isbn: document.getElementById('isbn').value
+            };
+            try {
+                const response = await fetch(livro.id ? `${apiUrl}/${livro.id}` : apiUrl, {
+                    method: livro.id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(livro)
+                });
+                if (!response.ok) {
+                    throw new Error(`Erro ao ${livro.id ? 'atualizar' : 'cadastrar'} livro: ${response.status}`);
+                }
+                listarLivros();
+                document.getElementById('livroForm').reset();
+            } catch (error) {
+                console.error(`Erro ao ${livro.id ? 'atualizar' : 'cadastrar'} livro:`, error);
+            }
+        });
+
+        async function editarLivro(id) {
+            try {
+                const response = await fetch(`${apiUrl}/${id}`);
+                if (!response.ok) {
+                    throw new Error(`Erro ao obter livro: ${response.status}`);
+                }
+                const livro = await response.json();
+                document.getElementById('id').value = livro.id;
+                document.getElementById('titulo').value = livro.titulo;
+                document.getElementById('autor').value = livro.autor;
+                document.getElementById('ano').value = livro.anoPublicacao;
+                document.getElementById('isbn').value = livro.isbn;
+            } catch (error) {
+                console.error("Erro ao editar livro:", error);
+            }
+        }
+
+        async function excluirLivro(id) {
+            try {
+                const response = await fetch(`${apiUrl}/${id}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    throw new Error(`Erro ao excluir livro: ${response.status}`);
+                }
+                listarLivros();
+            } catch (error) {
+                console.error("Erro ao excluir livro:", error);
+            }
+        }
+
+        listarLivros();
+    </script>
+</body>
+</html>
